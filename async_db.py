@@ -80,17 +80,19 @@ class AsyncDbTransaction:
         values = list(item.values())
 
         # 处理insert中包含mysql关键字
-        fields_list = list(map(lambda field: f'`{field}`', fields))
-        fieldstr = ','.join(fields_list)
-        valstr = ','.join(['%s'] * len(item))
-        sql = 'INSERT INTO %s (%s) VALUES(%s)' % (table_name, fieldstr, valstr)
+        fields_list = list(map(lambda field: f"`{field}`", fields))
+        fieldstr = ",".join(fields_list)
+        valstr = ",".join(["%s"] * len(item))
+        sql = "INSERT INTO %s (%s) VALUES(%s)" % (table_name, fieldstr, valstr)
 
         async with self.conn.cursor(aiomysql.DictCursor) as cur:
             await cur.execute(sql, values)
             lastrowid = cur.lastrowid
             return lastrowid
 
-    async def update_table(self, table_name: str, updates: Dict, field_where: str, value_where: str) -> int:
+    async def update_table(
+        self, table_name: str, updates: Dict, field_where: str, value_where: str
+    ) -> int:
         """
         根据给定的字段、更新值，更新表中的一条数据
         :param table_name:
@@ -102,14 +104,15 @@ class AsyncDbTransaction:
         upsets = []
         values = []
         for k, v in updates.items():
-            s = '`%s`=%%s' % k
+            s = "`%s`=%%s" % k
             upsets.append(s)
             values.append(v)
-        upsets = ','.join(upsets)
+        upsets = ",".join(upsets)
         sql = 'UPDATE %s SET %s WHERE %s="%s"' % (
             table_name,
             upsets,
-            field_where, value_where,
+            field_where,
+            value_where,
         )
         async with self.conn.cursor() as cur:
             rows = await cur.execute(sql, values)
@@ -120,7 +123,7 @@ class AsyncDbTransaction:
         开启一个mysql事物
         :return:
         """
-        self.conn = await aiomysql.connect(**self._db_config, autocommit=False, loop=None)
+        self.conn = await aiomysql.connect(**self._db_config, autocommit=False)
         await self.conn.autocommit(False)
         await self.conn.begin()
 
