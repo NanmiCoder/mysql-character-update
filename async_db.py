@@ -4,7 +4,7 @@
 # CreatedTime   ：   2024/07/29 02:41
 # Desc          :    aiomysql事务版本
 
-from typing import Dict, List, NoReturn, Optional
+from typing import Dict, List, Optional
 
 import aiomysql
 from aiomysql import Connection
@@ -63,8 +63,8 @@ class AsyncDbTransaction:
         :param value:
         :return:
         """
-        sql = 'SELECT %s FROM %s WHERE %s="%s"' % (field, table_name, field, value)
-        d = await self.get(sql)
+        sql = f"SELECT `{field}` FROM `{table_name}` WHERE `{field}` = %s"
+        d = await self.get(sql, (value,))
         if d:
             return True
         return False
@@ -104,21 +104,17 @@ class AsyncDbTransaction:
         upsets = []
         values = []
         for k, v in updates.items():
-            s = "`%s`=%%s" % k
+            s = f"`{k}`=%s"
             upsets.append(s)
             values.append(v)
         upsets = ",".join(upsets)
-        sql = 'UPDATE %s SET %s WHERE %s="%s"' % (
-            table_name,
-            upsets,
-            field_where,
-            value_where,
-        )
+        values.append(value_where)
+        sql = f"UPDATE `{table_name}` SET {upsets} WHERE `{field_where}` = %s"
         async with self.conn.cursor() as cur:
             rows = await cur.execute(sql, values)
             return rows
 
-    async def begin(self) -> NoReturn:
+    async def begin(self) -> None:
         """
         开启一个mysql事物
         :return:
@@ -127,7 +123,7 @@ class AsyncDbTransaction:
         await self.conn.autocommit(False)
         await self.conn.begin()
 
-    async def commit(self) -> NoReturn:
+    async def commit(self) -> None:
         """
         提交事物、并关闭链接
         :return:
@@ -135,7 +131,7 @@ class AsyncDbTransaction:
         await self.conn.commit()
         self.conn.close()
 
-    async def rollback(self) -> NoReturn:
+    async def rollback(self) -> None:
         """
         回滚事物
         :return:
